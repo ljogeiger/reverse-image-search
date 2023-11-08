@@ -21,7 +21,6 @@ def getToken():
     return creds.token
 
 def upsertDataPoint(datapoint_id, datapoint_content):
-    index_id = "7836549224647884800"
 
     type_datapointcontent = type(datapoint_content)
     type_datapointid = type(datapoint_id)
@@ -63,14 +62,14 @@ def hello_gcs(cloud_event: CloudEvent) -> tuple:
     """
     image_file = cloud_event.data
 
-    bucket_name = image_file["bucket"]
+    input_bucket_name = image_file["bucket"]
     image_name = image_file["name"]
 
-    bucket = storage_client.bucket(bucket_name)
+    bucket = storage_client.bucket(input_bucket_name)
     blob = bucket.get_blob(image_name)
     blob_bytes = blob.download_as_bytes()
 
-    print(f"Bucket: {bucket_name}")
+    print(f"Bucket: {input_bucket_name}")
     print(f"File: {image_name}")
 
     encoded_content = base64.b64encode(blob_bytes).decode("utf-8")
@@ -95,7 +94,7 @@ def hello_gcs(cloud_event: CloudEvent) -> tuple:
     }
 
     # NOTE: doesn't not check for repeated uploads of same image. Would need to include some logic in order to avoid overwriting already uploaded images 
-    # Vector Search does check for duplicates before upserting so it wouldn't affect the index performance wise. Would likely get charged for the bytes transfered. 
+    # Vector Search does check for duplicates before upserting so it wouldn't affect the index performance wise. Although you would likely get charged for the bytes transfered. 
 
     output_bucket = storage_client.bucket("prove-identityai-flower-embeddings")
     out_image_name = image_name.split(".")[0]

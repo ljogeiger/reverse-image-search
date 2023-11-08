@@ -15,5 +15,3 @@ gcloud functions deploy searchFromImage --gen2 --runtime=python311 --region=us-c
 gcloud builds submit --region=us-central1 --tag us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.0 .
 
 gcloud run deploy search-vector-db --image us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.0
-
-gcloud run deploy search-vector-db --image us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.
