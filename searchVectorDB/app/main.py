@@ -11,17 +11,25 @@ import os
 
 app = Flask(__name__)
 
-storage_client = storage.Client(project="prove-identityai")
+#change these
+PROJECT_NAME="prove-identityai"
+PROJECT_ID="267911685723"
+REGION="us-central1"
+ENDPOINT_DOMAIN="1814211594.us-central1-267911685723.vdb.vertexai.goog" # publicEndpointDomainName - https://cloud.google.com/vertex-ai/docs/vector-search/query-index-public-endpoint
+ENDPOINT_ID="7579844045887766528"
+DEPLOYED_ENDPOINT_DISPLAY_NAME="stream_search_deploy_1698156859082"
+
+storage_client = storage.Client(project=PROJECT_NAME)
 
 def getToken(): 
-    creds, project = google.auth.default()
+    creds, _ = google.auth.default()
     auth_req = google.auth.transport.requests.Request()
     creds.refresh(auth_req)
     return creds.token
 
 
 def searchFromEmbedding(embedding, top_n): 
-    endpoint = "https://1814211594.us-central1-267911685723.vdb.vertexai.goog/v1/projects/267911685723/locations/us-central1/indexEndpoints/7579844045887766528:findNeighbors"
+    endpoint = f"https://{ENDPOINT_DOMAIN}/v1/projects/{PROJECT_ID}/locations/{REGION}/indexEndpoints/{ENDPOINT_ID}:findNeighbors"
 
     token = getToken() 
 
@@ -30,7 +38,7 @@ def searchFromEmbedding(embedding, top_n):
             "Authorization": f"Bearer {token}"
         }, 
         json = {
-            "deployedIndexId": "stream_search_deploy_1698156859082",
+            "deployedIndexId": DEPLOYED_ENDPOINT_DISPLAY_NAME,
             "queries": [
                 {"datapoint": {"featureVector": embedding}}
             ]
@@ -62,6 +70,7 @@ def hello_http():
     bucket_name = request_json["bucket"]
     image_name = request_json["object"]
 
+    # default 3
     if "top_n" in request_json: 
         top_n = request_json["top_n"]
     else: 
@@ -76,8 +85,7 @@ def hello_http():
 
     encoded_content = base64.b64encode(blob_bytes).decode("utf-8")
 
-    endpoint = "https://us-central1-aiplatform.googleapis.com/v1/projects/prove-identityai/locations/us-central1/publishers/google/models/multimodalembedding@001:predict"
-    audience = "https://search-vector-db-u2zttg5cfa-uc.a.run.app"
+    endpoint = f"https://{REGION}-aiplatform.googleapis.com/v1/projects/{PROJECT_NAME}/locations/{REGION}/publishers/google/models/multimodalembedding@001:predict"
     
     token = getToken()
 

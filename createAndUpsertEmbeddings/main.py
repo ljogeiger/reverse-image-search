@@ -14,6 +14,11 @@ import google.auth.transport.requests
 
 storage_client = storage.Client()
 
+# change these
+PROJECT_NAME="prove-identityai" 
+REGION="us-central1"
+INDEX_ID="7836549224647884800"
+
 def getToken(): 
     creds, project = google.auth.default()
     auth_req = google.auth.transport.requests.Request()
@@ -30,7 +35,7 @@ def upsertDataPoint(datapoint_id, datapoint_content):
 
     token = getToken()
 
-    response = requests.post(f"https://us-central1-aiplatform.googleapis.com/v1/projects/prove-identityai/locations/us-central1/indexes/7836549224647884800:upsertDatapoints",
+    response = requests.post(f"https://{REGION}-aiplatform.googleapis.com/v1/projects/{PROJECT_NAME}/locations/{REGION}/indexes/{INDEX_ID}:upsertDatapoints",
         headers = {
             "Authorization": f"Bearer {token}"
         },
@@ -74,7 +79,7 @@ def hello_gcs(cloud_event: CloudEvent) -> tuple:
 
     token = getToken()
 
-    response = requests.post(f"https://us-central1-aiplatform.googleapis.com/v1/projects/prove-identityai/locations/us-central1/publishers/google/models/multimodalembedding@001:predict",
+    response = requests.post(f"https://{REGION}-aiplatform.googleapis.com/v1/projects/{PROJECT_NAME}/locations/{REGION}/publishers/google/models/multimodalembedding@001:predict",
         headers = {
             "Authorization": f"Bearer {token}"
         },

@@ -131,11 +131,13 @@ gcloud ai index-endpoints deploy-index $ENDPOINT_ID \
   --region=$REGION
 ```
 
-## 4 - Configure variables of createAndUpsertEmbeddings
+## 4 - Configure variables of createAndUpsertEmbeddings and searchVectorDB
 
-In the Cloud Function code you must update the upsertDatapoints endpoint with your own endpoint. Replace https://$REGION-aiplatform.googleapis.com/v1/projects/$PROJECT_NAME/locations/$REGION/indexes/$INDEX_ID:upsertDatapoints with your own variables. 
+In the createAndUpsertEmbeddings code you must update the PROJECT_NAME, REGION, and INDEX_ID variables. 
 
-Also update prove-identityai-flower-embeddings with your own embedding-bucket created in step 1. 
+You must also update the variables in searchVectorDB. 
+
+#TODO - Take screenshots to clarify where to find each variable. 
 
 ## 5 - Build createAndUpsertEmbeddings Cloud Function 
 ```
