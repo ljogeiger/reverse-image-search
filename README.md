@@ -8,7 +8,7 @@ Built off of sample code provided here: https://github.com/GoogleCloudPlatform/m
 
 ## Architecture Diagram 
 
-![alt text](images/ReverseImageSearch.png)
+![alt text](images/ReverseImageSearchBackground.png)
 
 ## Steps: 
 1. Build GCS buckets for images and embeddings 
@@ -19,12 +19,30 @@ Built off of sample code provided here: https://github.com/GoogleCloudPlatform/m
 6. Build searchVectorDB Cloud Run 
 7. Test system 
 
-## 1 - Build GCS buckets for images and embeddings 
+## Before you Begin 
+Make sure to set your environment variables: 
 ```
-gsutil mk gs://<raw-image-bucket>
-gsuitl mk gs://<embeddings-bucket>
+PROJECT_NAME=<project-name>
+REGION=<region> 
+
+RAW_IMAGE_UPLOAD_BUCKET=<raw-image-upload-bucket>
+EMBEDDINGS_BUCKET=<embeddings-bucket>
+RAW_IMAGE_SEARCH_BUCKET=<raw-image-search-bucket>
+
+INDEX_DISPLAY_NAME=<vector-search-index-display-name>
+ENDPOINT_DISPLAY_NAME=<vector-search-endpoint-display-name>
+DEPLOYED_ENDPOINT_DISPLAY_NAME=<vector-search-deployed-endpoint-display-name>
 ```
-Take note of the bucket names, we will use these later in the build. 
+
+Data can be found in the reverse-image-search/images directory and should consist of four images: a picture of a rose, tulip, daisy, and frangipani. 
+
+## 1 - Build GCS buckets for image_uploads, embeddings, and image_search
+```
+gsutil mk gs://$RAW_IMAGE_UPLOAD_BUCKET #prove-identityai-flowers-datasource
+gsutil mk gs://$EMBEDDINGS_BUCKET #prove-identityai-flower-embeddings
+gsuitl mk gs://$RAW_IMAGE_SEARCH_BUCKET #prove-identityai-flowers I might not need this
+```
+
 
 ## 2 - Set up Service Accounts and grant permissions
 Create two service accounts. 
@@ -36,20 +54,34 @@ gcloud iam service-accounts create cf_create_and_upsert \
     --display-name="Cloud Function Create and Upsert"
 ```
 ```
-gcloud projects add-iam-policy-binding PROJECT_ID \
-    --member="serviceAccount:SA_NAME@PROJECT_ID.iam.gserviceaccount.com" \
-    --role="ROLE_NAME"
+gcloud projects add-iam-policy-binding $PROJECT_NAME \
+    --member="serviceAccount:cf_create_and_upsert@$PROJECT_NAME.iam.gserviceaccount.com" \
+    --role="roles/aiplatform.serviceAgent"
+gcloud projects add-iam-policy-binding $PROJECT_NAME \
+    --member="serviceAccount:cf_create_and_upsert@$PROJECT_NAME.iam.gserviceaccount.com" \
+    --role="roles/storage.admin"
 ```
 
 ```
-gcloud iam service-accounts create cr_search_neighbors \
+gcloud iam service-accounts create sa-search-vector-db \
     --display-name="Cloud Run Search Neighbors"
 ```
 ```
-gcloud projects add-iam-policy-binding PROJECT_ID \
-    --member="serviceAccount:SA_NAME@PROJECT_ID.iam.gserviceaccount.com" \
-    --role="ROLE_NAME"
+gcloud projects add-iam-policy-binding $PROJECT_NAME \
+    --member="serviceAccount:sa-search-vector-db@$PROJECT_NAME.iam.gserviceaccount.com" \
+    --role="roles/aiplatform.serviceAgent"
+gcloud projects add-iam-policy-binding $PROJECT_NAME \
+    --member="serviceAccount:sa-search-vector-db@$PROJECT_NAME.iam.gserviceaccount.com" \
+    --role="roles/run.serviceAgent"
+gcloud projects add-iam-policy-binding $PROJECT_NAME \
+    --member="serviceAccount:sa-search-vector-db@$PROJECT_NAME.iam.gserviceaccount.com" \
+    --role="roles/storage.admin" 
+gcloud projects add-iam-policy-binding $PROJECT_NAME \
+    --member="serviceAccount:sa-search-vector-db@$PROJECT_NAME.iam.gserviceaccount.com" \
+    --role="roles/aiplatform.user"
 ```
+
+
 
 ## 3 - Create Vector Search Index and Endpoints
 
@@ -57,12 +89,12 @@ Create Vector Search Index: Currently, you cannot create an index on 0 embedding
 ```
 curl -X POST -H "Content-Type: application/json" \
 -H "Authorization: Bearer `gcloud auth print-access-token`" \
-https://{REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/indexes \
+https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_NAME}/locations/${REGION}/indexes \
 -d '{
-    displayName: "'${DISPLAY_NAME}'",
-    description: "'${DISPLAY_NAME}'",
+    displayName: "'${INDEX_DISPLAY_NAME}'",
+    description: "'${INDEX_DISPLAY_NAME}'",
     metadata: {
-       contentsDeltaUri: "'${embeddings-bucket}'",
+       contentsDeltaUri: "'${EMBEDDINGS_BUCKET}'",
        config: {
           dimensions: "'1408'",
           approximateNeighborsCount: 100,
@@ -77,53 +109,74 @@ https://{REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/$
 Create Endpoint: 
 ```
 gcloud ai index-endpoints create \
---display-name= DEPLOYED_INDEX_NAME \
---public-endpoint-enabled \ TRUE
---project= PROJECT_ID \
---region= LOCATION
+--display-name=$ENDPOINT_DISPLAY_NAME \
+--public-endpoint-enabled=TRUE \
+--project=$PROJECT_NAME \
+--region=$REGION
+```
+
+Find the id of your endpoint and the id of your index you created in previous steps. Set them as variables below.
+```
+ENDPOINT_ID=<endpoint-id>
+INDEX_ID=<index-id>
 ```
 
 Deploy to Endpoint: 
 ```
-gcloud ai index-endpoints deploy-index INDEX_ENDPOINT_ID \
-  --deployed-index-id=DEPLOYED_INDEX_ID \
-  --display-name=DEPLOYED_INDEX_NAME \
-  --index=INDEX_ID \
-  --project=PROJECT_ID \
-  --region=LOCATION
+gcloud ai index-endpoints deploy-index $ENDPOINT_ID \
+  --index=$INDEX_ID \
+  --deployed-index-id=$INDEX_ID \
+  --display-name=$DEPLOYED_ENDPOINT_DISPLAY_NAME \
+  --project=$PROJECT_NAME \
+  --region=$REGION
 ```
 
 ## 4 - Configure variables of createAndUpsertEmbeddings
 
-In the Cloud Function code you must update the upsertDatapoints endpoint with your own endpoint. Replace https://<location>-aiplatform.googleapis.com/v1/projects/<project-name>/locations/<location>/indexes/<index_id>:upsertDatapoints with your own variables. 
+In the Cloud Function code you must update the upsertDatapoints endpoint with your own endpoint. Replace https://$REGION-aiplatform.googleapis.com/v1/projects/$PROJECT_NAME/locations/$REGION/indexes/$INDEX_ID:upsertDatapoints with your own variables. 
 
 Also update prove-identityai-flower-embeddings with your own embedding-bucket created in step 1. 
 
 ## 5 - Build createAndUpsertEmbeddings Cloud Function 
 ```
-gcloud functions deploy createEmbeddingandUploadGCS --gen2 --runtime=python311 --region=us-central1 --source=. --entry-point=hello_gcs --trigger-event-filters="type=google.cloud.storage.object.v1.finalized" --trigger-event-filters="bucket=prove-identityai-flowers-datasource"
+cd ~/reverse-image-search/createAndUpsertEmbeddings
+
+gcloud functions deploy createEmbeddingandUploadGCS --gen2 --runtime=python311 --region=$REGION --source=. --entry-point=hello_gcs --trigger-event-filters="type=google.cloud.storage.object.v1.finalized" --trigger-event-filters="bucket=$RAW_IMAGE_UPLOAD_BUCKET" --service-account=cf_create_and_upsert@$PROJECT_NAME.iam.gserviceaccount.com
 ```
 
 
 ## 6 - Build searchVectorDB Cloud Run 
 ```
-cd ~/reverse-image-search/createAndUpsertEmbeddings
+cd ~/reverse-image-search/searchVectorDB
 
-gcloud builds submit --region=us-central1 --tag us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.0 .
+gcloud builds submit --region=$REGION --tag us-central1-docker.pkg.dev/$PROJECT_NAME/reverse-image-search/search-vector-db:v0.0 .
 
-gcloud run deploy search-vector-db --image us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.0
+gcloud run deploy search-vector-db --image us-central1-docker.pkg.dev/$PROJECT_NAME/reverse-image-search/search-vector-db:v0.0 --service-account sa-search-vector-db@$PROJECT_NAME.iam.gserviceaccount.com
 ```
 
 ## 7 - Test system 
 Test Cloud Function Upsert 
 ```
+curl -X POST <cloud-functions-endpoint> -H "Content-Type: application/cloudevents+json"    -d '{
+"specversion" : "1.0",
+"type" : "example.com.cloud.event",
+"source" : "https://example.com/cloudevents/pull",
+"subject" : "123",
+"id" : "A234-1234-1234",
+"time" : "2018-04-05T17:31:00Z",
+"data" : {"input_bucket": "${RAW_IMAGE_UPLOAD_BUCKET}", 
+            "output_bucket":"${EMBEDDINGS_BUCKET}",
+            "name": "tulip.jpg"}
+}'
 ```
 
 
 Test Cloud Run Search 
 ```
 curl -X POST <cloud-run-endpoint> -H "Authorization: Bearer $(gcloud auth print-identity-token)" -H "Content-Type: application/json" -d '{
-    "bucket":"prove-identityai-flowers-datasource",
+    "bucket":"${RAW_IMAGE_UPLOAD_BUCKET}",
     "object":"rose.jpeg"
     }'
 ```
+
+Replace endpoint url with localhost:8080 if testing in a local environment.

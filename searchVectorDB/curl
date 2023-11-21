@@ -1,17 +1,19 @@
 curl -X POST https://search-vector-db-u2zttg5cfa-uc.a.run.app/main -H "Authorization: Bearer $(gcloud auth print-identity-token)" -H "Content-Type: application/json" -d '{
     "bucket":"prove-identityai-flowers-datasource",
-    "object":"rose.jpeg"
+    "object":"rose.jpeg",
+    "top_n":3
     }'
 
 curl -X POST http://localhost:8080/main -H "Authorization: Bearer $(gcloud auth print-identity-token)" -H "Content-Type: application/json" -d '{
     "bucket":"prove-identityai-flowers-datasource",
-    "object":"rose.jpeg"
+    "object":"rose.jpeg",
+    "top_n":3
     }'
 
 gcloud functions deploy createEmbeddingandUploadGCS --gen2 --runtime=python311 --region=us-central1 --source=. --entry-point=hello_gcs --trigger-event-filters="type=google.cloud.storage.object.v1.finalized" --trigger-event-filters="bucket=prove-identityai-flowers-datasource"
 
 gcloud functions deploy searchFromImage --gen2 --runtime=python311 --region=us-central1 --source=. --entry-point=hello_http
 
-gcloud builds submit --region=us-central1 --tag us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.0 .
+gcloud builds submit --region=us-central1 --tag us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.1 .
 
-gcloud run deploy search-vector-db --image us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.0
+gcloud run deploy search-vector-db --image us-central1-docker.pkg.dev/prove-identityai/reverse-image-search/search-vector-db:v0.1 --service-account sa-search-vector-db@prove-identityai.iam.gserviceaccount.com

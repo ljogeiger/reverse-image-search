@@ -62,15 +62,13 @@ def hello_gcs(cloud_event: CloudEvent) -> tuple:
     """
     image_file = cloud_event.data
 
-    input_bucket_name = image_file["bucket"]
-    image_name = image_file["name"]
+    input_bucket_name = image_file["input_bucket"]
+    output_bucket_name = image_file["output_bucket"]
+    input_image_name = image_file["image_name"]
 
     bucket = storage_client.bucket(input_bucket_name)
-    blob = bucket.get_blob(image_name)
+    blob = bucket.get_blob(input_image_name)
     blob_bytes = blob.download_as_bytes()
-
-    print(f"Bucket: {input_bucket_name}")
-    print(f"File: {image_name}")
 
     encoded_content = base64.b64encode(blob_bytes).decode("utf-8")
 
@@ -89,15 +87,15 @@ def hello_gcs(cloud_event: CloudEvent) -> tuple:
     embedding = response.json()["predictions"][0]['imageEmbedding']
 
     json_object = {
-        "id": f"{image_name}",
+        "id": f"{input_image_name}",
         "embedding": embedding
     }
 
     # NOTE: doesn't not check for repeated uploads of same image. Would need to include some logic in order to avoid overwriting already uploaded images 
     # Vector Search does check for duplicates before upserting so it wouldn't affect the index performance wise. Although you would likely get charged for the bytes transfered. 
 
-    output_bucket = storage_client.bucket("prove-identityai-flower-embeddings")
-    out_image_name = image_name.split(".")[0]
+    output_bucket = storage_client.bucket(output_bucket_name)
+    out_image_name = input_image_name.split(".")[0]
 
     new_blob = output_bucket.blob(f"embedding_{out_image_name}.json")
     new_blob.upload_from_string(
@@ -105,7 +103,7 @@ def hello_gcs(cloud_event: CloudEvent) -> tuple:
         content_type='application/json'
     )    
 
-    upsert_result = upsertDataPoint(image_name, embedding)    
+    upsert_result = upsertDataPoint(input_image_name, embedding)    
     print(f"Upsert Result: {upsert_result}")
     
     if upsert_result == "success":

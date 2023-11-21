@@ -22,7 +22,6 @@ def getToken():
 
 def searchFromEmbedding(embedding, top_n): 
     endpoint = "https://1814211594.us-central1-267911685723.vdb.vertexai.goog/v1/projects/267911685723/locations/us-central1/indexEndpoints/7579844045887766528:findNeighbors"
-    audience = "https://search-vector-db-u2zttg5cfa-uc.a.run.app"
 
     token = getToken() 
 

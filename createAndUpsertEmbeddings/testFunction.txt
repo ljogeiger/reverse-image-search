@@ -5,6 +5,7 @@ curl -X POST localhost:8080    -H "Content-Type: application/cloudevents+json"  
 "subject" : "123",
 "id" : "A234-1234-1234",
 "time" : "2018-04-05T17:31:00Z",
-"data" : {"bucket": "prove-identityai-flowers-datasource", 
+"data" : {"input_bucket": "prove-identityai-flowers-datasource", 
+            "output_bucket":"prove-identityai-flower-embeddings",
             "name": "tulip.jpg"}
 }'
