@@ -4,6 +4,8 @@ Author: lukasgeiger@google.com
 TLDR: Search for similar images using an image file. This tutorial uses GCP's Multimodal Embedding API 
 and Vector Search to perform Approximate Nearest Neighbors (ANN) search. 
 
+For demonstration purposes only. 
+
 Built off of sample code provided here: https://github.com/GoogleCloudPlatform/matching-engine-tutorial-for-image-search
 
 ## Architecture Diagram 
@@ -137,13 +139,13 @@ In the createAndUpsertEmbeddings code you must update the PROJECT_NAME, REGION, 
 
 You must also update the variables in searchVectorDB. 
 
-#TODO - Take screenshots to clarify where to find each variable. 
+<!-- TODO - Take screenshots to clarify where to find each variable. -->
 
 ## 5 - Build createAndUpsertEmbeddings Cloud Function 
 ```
 cd ~/reverse-image-search/createAndUpsertEmbeddings
 
-gcloud functions deploy createEmbeddingandUploadGCS --gen2 --runtime=python311 --region=$REGION --source=. --entry-point=hello_gcs --trigger-event-filters="type=google.cloud.storage.object.v1.finalized" --trigger-event-filters="bucket=$RAW_IMAGE_UPLOAD_BUCKET" --service-account=cf_create_and_upsert@$PROJECT_NAME.iam.gserviceaccount.com
+gcloud functions deploy createEmbeddingandUploadGCS --gen2 --runtime=python311 --region=$REGION --source=. --entry-point=main --trigger-event-filters="type=google.cloud.storage.object.v1.finalized" --trigger-event-filters="bucket=$RAW_IMAGE_UPLOAD_BUCKET" --service-account=cf_create_and_upsert@$PROJECT_NAME.iam.gserviceaccount.com
 ```
 
 
@@ -171,7 +173,6 @@ curl -X POST <cloud-functions-endpoint> -H "Content-Type: application/cloudevent
             "name": "tulip.jpg"}
 }'
 ```
-
 
 Test Cloud Run Search 
 ```

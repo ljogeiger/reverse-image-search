@@ -57,13 +57,14 @@ def upsertDataPoint(datapoint_id, datapoint_content):
 
 # Triggered by a change in a storage bucket
 @functions_framework.cloud_event
-def hello_gcs(cloud_event: CloudEvent) -> tuple:
+def main(cloud_event: CloudEvent) -> string:
     """This function is triggered by a change in a storage bucket.
 
     Args:
         cloud_event: The CloudEvent that triggered this function.
     Returns:
-        
+        embedding file + complete if successful 
+        embedding file + unsuccessful if error
     """
     image_file = cloud_event.data
 

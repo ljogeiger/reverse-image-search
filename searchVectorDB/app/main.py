@@ -54,7 +54,7 @@ def searchFromEmbedding(embedding, top_n):
     return result_top_n
 
 @app.route("/main", methods=["POST"])
-def hello_http():
+def start():
     """HTTP Cloud Function.
     Args:
         request (flask.Request): The request object.
